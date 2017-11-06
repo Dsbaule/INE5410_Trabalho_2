@@ -29,7 +29,7 @@ public class Server {
             output.flush();
             ObjectInputStream input = new ObjectInputStream(socket.getInputStream());
 
-            //Carrega a lista de códigos a encontrar
+            //Carrega a lista de códigos a encontrar e cria uma lista de booleans correspondente
             List<String> codigos = Files.readAllLines(Paths.get("hashes.txt"));
 
             //Para cada código da lista...
