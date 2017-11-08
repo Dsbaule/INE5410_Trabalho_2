@@ -8,7 +8,6 @@ package HashServer;
 
 // Imports
 import Data.ClientParameters;
-import Data.HashCode;
 import Data.Protocol;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -88,6 +87,7 @@ public class HashServer {
                     int clientMessage;
                     ClientParameters parameters = null;
 
+                    WHILE:
                     while (true) {
                         clientMessage = input.readInt();
 
@@ -95,6 +95,15 @@ public class HashServer {
                             case Protocol.HASHCODE_FOUND:
                                 String numero = (String) input.readObject();
                                 System.out.println("O código " + parameters.getCodigo() + " é produzido pelo número " + numero);
+
+                                synchronized (hashCodes) {
+                                    if (index == hashCodes.indexOf(parameters.getCodigo())) {
+                                        if (done(++index)) {
+                                            break WHILE;
+                                        }
+                                        initial_value = 0;
+                                    }
+                                }
 
                                 for (ObjectOutputStream out : clients) {
                                     if (!out.equals(output)) {
@@ -114,6 +123,11 @@ public class HashServer {
                         }
                     }
 
+                    for (ObjectOutputStream out : clients) {
+                        out.writeInt(Protocol.DONE);
+                        out.flush();
+                    }
+
                 } catch (IOException ex) {
                     Logger.getLogger(HashServer.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (ClassNotFoundException ex) {
@@ -130,13 +144,15 @@ public class HashServer {
     private synchronized ClientParameters getNextParameters() {
         ClientParameters clientParameters;
 
-        clientParameters = new ClientParameters(hashCodes.get(index), initial_value, (initial_value + FAIXA - 1));
+        synchronized (hashCodes) {
+            clientParameters = new ClientParameters(hashCodes.get(index), initial_value, (initial_value + FAIXA - 1));
 
-        initial_value += FAIXA;
+            initial_value += FAIXA;
 
-        if (initial_value > MAX_NUMERO) {
-            index++;
-            initial_value = 0;
+            if (initial_value > MAX_NUMERO) {
+                index++;
+                initial_value = 0;
+            }
         }
 
         return clientParameters;

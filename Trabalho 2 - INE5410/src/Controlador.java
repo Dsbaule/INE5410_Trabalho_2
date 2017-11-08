@@ -6,8 +6,6 @@
 
 import HashClient.HashClient;
 import java.util.Scanner;
-import HashServer.HashServerMain;
-import HashClient.HashClientMain;
 import HashServer.HashServer;
 
 public class Controlador {

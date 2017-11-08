@@ -16,15 +16,13 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class HashClient {
 
     // Atributes
-    private boolean testHash;
+    private boolean testHashCode;
     private Socket socket;
 
     private final String ip;
@@ -32,11 +30,9 @@ public class HashClient {
 
     private ClientParameters parameters;
 
-    private Lock lock = new ReentrantLock(true);
-
     // Constructor
     public HashClient(String ip, int port) {
-        testHash = false;
+        testHashCode = false;
         this.ip = ip;
         this.port = port;
     }
@@ -53,8 +49,6 @@ public class HashClient {
             ObjectInputStream input;
             input = new ObjectInputStream(socket.getInputStream());
             
-            lock.lock();
-            
             Thread hashTesterThread = startHashTesterThread(output);
 
             int serverResponse;
@@ -63,27 +57,25 @@ public class HashClient {
             WHILE:
             while (true) {
                 
-                lock.lock();
-                
                 System.out.println("Aguardando resposta do servidor!");
                 serverResponse = input.readInt();
 
                 switch (serverResponse) {
                     case Protocol.DONE:
                         System.out.println("DONE!");
-                        testHash = false;
+                        testHashCode = false;
                         break WHILE;
                     case Protocol.HASHCODE_FOUND:
                         System.out.println("HASHCODE_FOUND!");
                         hashCode = (String) input.readObject();
                         if (!parameters.getCodigo().equals(hashCode))
                             break;
-                        testHash = false;
+                        testHashCode = false;
+                        break;
                     case Protocol.NEXT_HASHCODE:
-                        System.out.println("HASHCODE_FOUND!");
+                        System.out.println("NEXT_HASHCODE!");
                         parameters = (ClientParameters) input.readObject();
-                        testHash = true;
-                        lock.unlock();
+                        testHashCode = true;
                         break;
                 }
             }
@@ -109,8 +101,8 @@ public class HashClient {
                 e.printStackTrace();
             }
             
-            lock.unlock();
-
+            testHashCode = true;
+            
         } catch (IOException ex) {
             Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
         } catch (ClassNotFoundException ex) {
@@ -126,12 +118,14 @@ public class HashClient {
                     while (true) {
                         output.writeInt(Protocol.NEXT_HASHCODE);
                         output.flush();
-
-                        lock.lock();
+                        
+                        while(!testHashCode){
+                            Thread.sleep(1);
+                        }
                         
                         System.out.println("Testando o código " + parameters.getCodigo() + " no intervalo " + parameters.getInitialValue() + " - " + parameters.getFinalValue());
 
-                        for (int i = parameters.getInitialValue(); (i <= parameters.getFinalValue()) && testHash; i++) {
+                        for (int i = parameters.getInitialValue(); (i <= parameters.getFinalValue()) && testHashCode; i++) {
                             //Formata i com 7 casas (ex.: 0000000)
                             String numero = String.format("%07d", i);
                             //Calcula o MD5 desse número
@@ -145,10 +139,12 @@ public class HashClient {
                                 System.out.println("O código " + parameters.getCodigo() + " é produzido pelo número " + numero);
                             }
                         }
-
-                        lock.unlock();
+                        
+                        testHashCode = false;
                     }
                 } catch (IOException | NoSuchAlgorithmException ex) {
+                    Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (InterruptedException ex) {
                     Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
