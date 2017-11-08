@@ -21,7 +21,11 @@ public class Controlador {
                 hashServer.execute();
                 break;
             } else if (s.equals("cliente")) {
-                HashClient hashClient = new HashClient("127.0.0.1", 5000);
+                System.out.println("IP = ");
+                String ip = scanner.nextLine();
+                if(ip.equals(""))
+                    ip = "127.0.0.1";
+                HashClient hashClient = new HashClient(ip, 5000);
                 hashClient.execute();
                 break;
             } else if (s.equals("sair")) {

@@ -39,16 +39,17 @@ public class HashClient {
 
     // Methods
     public void execute() {
-        try {            
+        try {
+            System.out.println("Conectando ao servidor: " + ip + ":" + port);
             socket = new Socket(InetAddress.getByName(ip), port);
-            
+
             ObjectOutputStream output;
             output = new ObjectOutputStream(socket.getOutputStream());
             output.flush();
-            
+
             ObjectInputStream input;
             input = new ObjectInputStream(socket.getInputStream());
-            
+
             Thread hashTesterThread = startHashTesterThread(output);
 
             int serverResponse;
@@ -56,24 +57,25 @@ public class HashClient {
 
             WHILE:
             while (true) {
-                
+
                 System.out.println("Aguardando resposta do servidor!");
                 serverResponse = input.readInt();
 
                 switch (serverResponse) {
                     case Protocol.DONE:
-                        System.out.println("DONE!");
+                        //System.out.println("DONE!");
                         testHashCode = false;
                         break WHILE;
                     case Protocol.HASHCODE_FOUND:
-                        System.out.println("HASHCODE_FOUND!");
+                        //System.out.println("HASHCODE_FOUND!");
                         hashCode = (String) input.readObject();
-                        if (!parameters.getCodigo().equals(hashCode))
+                        if (!parameters.getCodigo().equals(hashCode)) {
                             break;
+                        }
                         testHashCode = false;
                         break;
                     case Protocol.NEXT_HASHCODE:
-                        System.out.println("NEXT_HASHCODE!");
+                        //System.out.println("NEXT_HASHCODE!");
                         parameters = (ClientParameters) input.readObject();
                         testHashCode = true;
                         break;
@@ -96,33 +98,35 @@ public class HashClient {
                 e.printStackTrace();
             }
             try {
+                testHashCode = true;
                 hashTesterThread.join();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            
-            testHashCode = true;
-            
+
         } catch (IOException ex) {
-            Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         } catch (ClassNotFoundException ex) {
             Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
         }
+
+        System.out.println("Conexão Encerrada.");
     }
 
     private Thread startHashTesterThread(ObjectOutputStream output) throws IOException {
 
         Thread hashTesterThread = new Thread() {
+            @Override
             public void run() {
                 try {
                     while (true) {
                         output.writeInt(Protocol.NEXT_HASHCODE);
                         output.flush();
-                        
-                        while(!testHashCode){
-                            Thread.sleep(1);
+
+                        while (!testHashCode) {
+                            Thread.sleep(0, 1);
                         }
-                        
+
                         System.out.println("Testando o código " + parameters.getCodigo() + " no intervalo " + parameters.getInitialValue() + " - " + parameters.getFinalValue());
 
                         for (int i = parameters.getInitialValue(); (i <= parameters.getFinalValue()) && testHashCode; i++) {
@@ -134,19 +138,21 @@ public class HashClient {
                             //Verifica se o código produzido é igual ao do arquivo
                             if (parameters.matchesCodigo(md5)) {
                                 output.writeInt(Protocol.HASHCODE_FOUND);
-                                output.writeObject(md5);
+                                output.writeInt(i);
                                 output.flush();
                                 System.out.println("O código " + parameters.getCodigo() + " é produzido pelo número " + numero);
                             }
                         }
-                        
+
                         testHashCode = false;
                     }
                 } catch (IOException | NoSuchAlgorithmException ex) {
-                    Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
+                    ex.printStackTrace();
                 } catch (InterruptedException ex) {
                     Logger.getLogger(HashClient.class.getName()).log(Level.SEVERE, null, ex);
                 }
+                
+                System.out.println("Encerrando!");
             }
         };
 

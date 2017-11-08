@@ -12,6 +12,7 @@ import Data.Protocol;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
@@ -28,7 +29,7 @@ public class HashServer {
     private List<String> hashCodes;
     private List<ObjectOutputStream> clients;
 
-    private int port;
+    private final int port;
 
     private static final int FAIXA = 200000;
     private static final int MAX_NUMERO = 9999999;
@@ -36,6 +37,8 @@ public class HashServer {
     private int initial_value = 0;
     private int index;
     private String currentHash;
+
+    private ServerSocket server;
 
     // Constructor
     public HashServer(int port) {
@@ -50,11 +53,12 @@ public class HashServer {
             //Carrega a lista de códigos a encontrar
             hashCodes = Files.readAllLines(Paths.get("hashes.txt"));
 
-            System.out.println("Aguardando conexões...");
+            
             //Cria um socket para receber conexões na porta 5000
-            ServerSocket server = new ServerSocket(5000, 10);
+            server = new ServerSocket(5000, 50, InetAddress.getByName("127.0.0.1"));
+            System.out.println("Aguardando conexões... IP = " + server.getInetAddress());
 
-            while (true) {
+            while (!done(index)) {
                 //Recebe uma nova conexão
                 Socket socket = server.accept();
                 System.out.println("Nova conexão realizada");
@@ -64,7 +68,7 @@ public class HashServer {
             }
 
         } catch (IOException ex) {
-            Logger.getLogger(HashServer.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println("Encerrado.");
         }
     }
 
@@ -93,14 +97,13 @@ public class HashServer {
 
                         switch (clientMessage) {
                             case Protocol.HASHCODE_FOUND:
-                                String numero = (String) input.readObject();
+                                int numero = input.readInt();
                                 System.out.println("O código " + parameters.getCodigo() + " é produzido pelo número " + numero);
 
                                 synchronized (hashCodes) {
                                     if (index == hashCodes.indexOf(parameters.getCodigo())) {
-                                        if (done(++index)) {
+                                        if (done(++index))
                                             break WHILE;
-                                        }
                                         initial_value = 0;
                                     }
                                 }
@@ -115,11 +118,13 @@ public class HashServer {
                                 break;
                             case Protocol.NEXT_HASHCODE:
                                 parameters = getNextParameters();
-                                System.out.println("Enviando o código " + parameters.getCodigo() + " no intervalo " + parameters.getInitialValue() + " - " + parameters.getFinalValue());
+                                //System.out.println("Enviando o código " + parameters.getCodigo() + " no intervalo " + parameters.getInitialValue() + " - " + parameters.getFinalValue());
                                 output.writeInt(Protocol.NEXT_HASHCODE);
                                 output.writeObject(parameters);
                                 output.flush();
                                 break;
+                            case Protocol.DONE:
+                                break WHILE;
                         }
                     }
 
@@ -128,11 +133,31 @@ public class HashServer {
                         out.flush();
                     }
 
+                    System.out.println("Encerrando...");
+
+                    clients.remove(output);
+
+                    try {
+                        input.close();
+                    } catch (IOException e) {
+                    }
+                    try {
+                        output.close();
+                    } catch (IOException e) {
+                    }
+                    try {
+                        socket.close();
+                    } catch (IOException e) {
+                    }
+                    try {
+                        server.close();
+                    } catch (IOException e) {
+                    }
+
                 } catch (IOException ex) {
                     Logger.getLogger(HashServer.class.getName()).log(Level.SEVERE, null, ex);
-                } catch (ClassNotFoundException ex) {
-                    Logger.getLogger(HashServer.class.getName()).log(Level.SEVERE, null, ex);
                 }
+
             }
         };
 
@@ -159,6 +184,6 @@ public class HashServer {
     }
 
     private boolean done(int index) {
-        return index > hashCodes.size();
+        return index >= hashCodes.size();
     }
 }
