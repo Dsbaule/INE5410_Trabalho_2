@@ -7,6 +7,9 @@
 import HashClient.HashClient;
 import java.util.Scanner;
 import HashServer.HashServer;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Controlador {
 
@@ -17,8 +20,13 @@ public class Controlador {
             System.out.println("Deseja iniciar em que modo? [server/cliente]");
             String s = scanner.nextLine();
             if (s.equals("server")) {
-                HashServer hashServer = new HashServer(5000);
-                hashServer.execute();
+                HashServer hashServer;
+                try {
+                    hashServer = new HashServer(5000);
+                    hashServer.execute();
+                } catch (IOException ex) {
+                    Logger.getLogger(Controlador.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 break;
             } else if (s.equals("cliente")) {
                 System.out.println("IP = ");

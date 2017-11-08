@@ -26,8 +26,8 @@ import java.util.logging.Logger;
 public class HashServer {
 
     // Atributes
-    private List<String> hashCodes;
-    private List<ObjectOutputStream> clients;
+    private final List<String> hashCodes;
+    private final List<ObjectOutputStream> clients;
 
     private final int port;
 
@@ -36,27 +36,25 @@ public class HashServer {
 
     private int initial_value = 0;
     private int index;
-    private String currentHash;
 
     private ServerSocket server;
 
     // Constructor
-    public HashServer(int port) {
+    public HashServer(int port) throws IOException {
         this.index = 0;
         this.port = port;
         this.clients = new ArrayList<>();
+        
+        //Carrega a lista de códigos a encontrar
+        this.hashCodes = Files.readAllLines(Paths.get("hashes.txt"));
     }
 
     // Methods
     public void execute() {
         try {
-            //Carrega a lista de códigos a encontrar
-            hashCodes = Files.readAllLines(Paths.get("hashes.txt"));
-
-            
             //Cria um socket para receber conexões na porta 5000
-            server = new ServerSocket(5000, 50, InetAddress.getByName("127.0.0.1"));
-            System.out.println("Aguardando conexões... IP = " + server.getInetAddress());
+            server = new ServerSocket(port, 50, InetAddress.getByName("127.0.0.1"));
+            System.out.println("Aguardando conexões... IP = " + InetAddress.getLocalHost());
 
             while (!done(index)) {
                 //Recebe uma nova conexão
@@ -89,7 +87,7 @@ public class HashServer {
                     }
 
                     int clientMessage;
-                    ClientParameters parameters = null;
+                    ClientParameters parameters = new ClientParameters("", 0, 0);
 
                     WHILE:
                     while (true) {
