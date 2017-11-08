@@ -4,9 +4,11 @@
  * Arquivo:     Classe principal para seleção de servidor/cliente
  */
 
+import HashClient.HashClient;
 import java.util.Scanner;
 import HashServer.HashServerMain;
 import HashClient.HashClientMain;
+import HashServer.HashServer;
 
 public class Controlador {
 
@@ -17,11 +19,11 @@ public class Controlador {
             System.out.println("Deseja iniciar em que modo? [server/cliente]");
             String s = scanner.nextLine();
             if (s.equals("server")) {
-                HashServerMain hashServer = new HashServerMain();
+                HashServer hashServer = new HashServer(5000);
                 hashServer.execute();
                 break;
             } else if (s.equals("cliente")) {
-                HashClientMain hashClient = new HashClientMain();
+                HashClient hashClient = new HashClient("127.0.0.1", 5000);
                 hashClient.execute();
                 break;
             } else if (s.equals("sair")) {

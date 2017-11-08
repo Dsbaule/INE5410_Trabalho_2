@@ -37,5 +37,15 @@ public class CodigoSequencial
         }
     }
 
+    //Esta função produz um hash MD5 para a string de entrada
+    private static String md5(String entrada) throws NoSuchAlgorithmException {
+        MessageDigest sha1 = MessageDigest.getInstance("MD5");
+        byte[] saida = sha1.digest(entrada.getBytes());
+        StringBuilder saidaStr = new StringBuilder();
+        for (byte b : saida) {
+            saidaStr.append(String.format("%02x", b));
+        }
+        return saidaStr.toString();
+    }
     
 }
